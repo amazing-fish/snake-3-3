@@ -1398,11 +1398,11 @@ function getBestScore(diff) {
    SCREEN ROUTING
 ============================================================ */
 function goScreen(name) {
+  const prev = qs('.screen.active');
   qsa('.screen').forEach(s => {
     s.classList.remove('active');
     s.classList.remove('exit');
   });
-  const prev = qs('.screen.active');
   if (prev) prev.classList.add('exit');
   const next = $(`screen-${name}`);
   if (next) {
@@ -1822,8 +1822,12 @@ class SnakeGame {
       }
     }
 
-    /* self collision */
-    const selfHit = this.snake.some(s => s.x === nx && s.y === ny);
+    const willEatNormal = nx === this.food.x && ny === this.food.y;
+    const willEatBonus = !!(this.bonusFood && nx === this.bonusFood.x && ny === this.bonusFood.y);
+
+    /* self collision (允许进入“将被移走”的尾巴格子) */
+    const bodyToCheck = (willEatNormal || willEatBonus) ? this.snake : this.snake.slice(0, -1);
+    const selfHit = bodyToCheck.some(s => s.x === nx && s.y === ny);
     if (selfHit) { this.die(); return; }
 
     const newHead = { x: nx, y: ny };
@@ -1831,10 +1835,10 @@ class SnakeGame {
 
     /* eat food */
     let ate = false;
-    if (nx === this.food.x && ny === this.food.y) {
+    if (willEatNormal) {
       ate = true;
       this.onEat(false);
-    } else if (this.bonusFood && nx === this.bonusFood.x && ny === this.bonusFood.y) {
+    } else if (willEatBonus) {
       ate = true;
       this.onEat(true);
       this.bonusFood = null;
@@ -1862,20 +1866,21 @@ class SnakeGame {
     const pts = Math.round(basePoints * comboMul * levelMul * diffMul);
     this.score += pts;
 
+    const eatPos = isBonus && this.bonusFood ? this.bonusFood : this.food;
+
     /* show score popup */
-    this.showScorePopup(this.food.x, this.food.y, pts, isBonus);
+    this.showScorePopup(eatPos.x, eatPos.y, pts, isBonus);
 
     if (isBonus) {
       Audio.bonus();
-      this.placeFood(); // keep food, just ate bonus
     } else {
       Audio.eat();
       this.placeFood();
     }
 
     /* particle burst */
-    const ex = (isBonus ? this.bonusFood?.x ?? this.food.x : this.food.x) * this.cell + this.cell / 2;
-    const ey = (isBonus ? this.bonusFood?.y ?? this.food.y : this.food.y) * this.cell + this.cell / 2;
+    const ex = eatPos.x * this.cell + this.cell / 2;
+    const ey = eatPos.y * this.cell + this.cell / 2;
     const foodColor = isBonus ? '#ffd700' : this.getFoodColor();
     this.ps.spawn(ex, ey, 24, foodColor, 4, 5);
     this.ps.spawnRing(ex, ey, foodColor);

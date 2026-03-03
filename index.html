@@ -1897,7 +1897,7 @@ class SnakeGame {
     if (newLevel > this.level) {
       this.level = newLevel;
       Audio.level();
-      this.showToast(`⬆ 等级提升 ${this.level}！`);
+      showToast(`⬆ 等级提升 ${this.level}！`);
       /* bonus food chance */
       if (this.level % 3 === 0 && !this.bonusFood) {
         this.placeBonus();
